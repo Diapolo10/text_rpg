@@ -5,12 +5,12 @@ import time
 from gui import *
 from settings import *
 
-class Entity(object):
+class Entity:
     def __init__(self, name):
         self.name = name
 
     def __repr__(self):
-        return str(self.name)
+        return f"Entity({self.name})"
 
     def nextlevel(self):
         raise NotImplementedError
@@ -21,6 +21,27 @@ class Entity(object):
     def give_exp(self):
         raise NotImplementedError
 
+class Item:
+    def __init__(self, name):
+        self.name = name
+        self.is_worn = False
+        self.worn_slot = None
+
+    def __repr__(self):
+        return f"Item({self.name})"
+
+class Weapon(Item):
+    def __init__(self, name, attack_power, level_req=None, is_two_handed=False):
+        self.name = name
+        self.attpow = attack_power
+        self.level_req = level_req
+        self.is2h = is_two_handed
+        self.is_worn = True
+        self.worn_slot = 'weapon'
+
+    def __repr__(self):
+        return f"Weapon({self.name}, {self.attpow}, level_req: {self.level_req}, 2h: {self.is2h})"
+
 class Player(Entity):
     def __init__(self, name, exp):
         self.name = name
@@ -28,6 +49,17 @@ class Player(Entity):
         self.level = 1
         self.hp = 100
         self.max_hp = 100
+        self.equipment = {'weapon': None,
+                          'shield': None,
+                          'head': None,
+                          'chest': None,
+                          'feet': None,}
+
+    @property
+    def attack(self):
+        """ Returns player's real attack power as int """
+        equipment_power = sum([getattr(self.equipment[i], attpow, 0) for i in self.equipment.values])
+        return round(self.level ** 0.97 + equipment_power + 1)
 
     def nextlevel(self):
         """Level-up experience curve, no cap"""
@@ -73,7 +105,7 @@ class Monster(Entity):
         self.drop_count = random.randint(0,loot[1])
         self.drop_table = loot[2]
 
-class Battle(object):
+class Battle:
     def __init__(self, party, enemy):
         """
         party: list of player party members
@@ -128,7 +160,7 @@ class Battle(object):
         self.party_hp = sum([int(char.hp) for char in self.party])
         self.enemy_hp = sum([int(e.hp) for e in self.enemy])
 
-class Stage(object):
+class Stage:
     def __init__(self, floor):
         self.floor = floor
         self.wave = 0
