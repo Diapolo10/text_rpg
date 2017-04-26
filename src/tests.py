@@ -1,6 +1,7 @@
 from gui import *
 from objects import *
 from settings import *
+import random
 
 player_party = [
                 Player("Kaguya",0),
@@ -10,7 +11,7 @@ player_party = [
                 ]
 
 enemy_party = [
-               Monster("Thingummywut", 10)
+               Enemy("Thingummywut", 10)
                for i in range(4)
                ]
 
@@ -26,8 +27,17 @@ def gui_battle_tests():
 
 def object_tests():
     for i in weapons:
-        print(f"I love {i.name}!")
-        print(i.__repr__())
+        print(i)
+        print(f"I like your item: {i.name}!")
+    print()
+
+    for i in player_party:
+        print(i)
+        i.equipment[0] = weapons[random.randint(0,len(weapons)-1)]
+        i.level = random.randint(1,99)
+        print(i)
+        print(f"{i.name}'s attack deals {i.attack} damage and their defence is {i.defence}.\n")
+
 
 if __name__ == "__main__":
     # gui_battle_tests()

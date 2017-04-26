@@ -10,7 +10,7 @@ def main():
             last_stats = f.read()
             os.system('cls')
             print(last_stats)
-        time.sleep(.1)
+        time.sleep(0.1)
 
 if __name__ == "__main__":
     main()

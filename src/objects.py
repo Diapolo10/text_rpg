@@ -5,27 +5,16 @@ import time
 from gui import *
 from settings import *
 
-class Entity:
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"Entity({self.name})"
-
-    def nextlevel(self):
-        raise NotImplementedError
-
-    def levelup(self):
-        raise NotImplementedError
-
-    def give_exp(self):
-        raise NotImplementedError
+################################# Item classes ################################
 
 class Item:
     def __init__(self, name):
         self.name = name
         self.is_worn = False
         self.worn_slot = None
+
+    def __str__(self):
+        return f"Item({self.name})"
 
     def __repr__(self):
         return f"Item({self.name})"
@@ -37,32 +26,106 @@ class Weapon(Item):
         self.level_req = level_req
         self.is2h = is_two_handed
         self.is_worn = True
-        self.worn_slot = 'weapon'
+        self.worn_slot = 0
+
+    def __str__(self):
+        return f"Weapon({self.name}, {self.attpow}, level_req: {self.level_req}, 2h: {self.is2h})"
 
     def __repr__(self):
         return f"Weapon({self.name}, {self.attpow}, level_req: {self.level_req}, 2h: {self.is2h})"
 
+class Shield(Item):
+    def __init__(self, name, defence, level_req=None):
+        self.name = name
+        self.dfc = defence
+        self.level_req = level_req
+        self.is_worn = True
+        self.worn_slot = 1
+
+    def __str__(self):
+        return f"Shield({self.name}, {self.dfc}, level_req: {self.level_req})"
+
+    def __repr__(self):
+        return f"Shield({self.name}, {self.dfc}, level_req: {self.level_req})"
+
+class Armour(Item):
+    def __init__(self, name: str, defence: int, slot: int, level_req=None):
+        self.name = name
+        self.dfc = defence
+        self.worn_slot = slot
+        self.level_req = level_req
+        self.is_worn = True
+
+    def __str__(self):
+        return f"Armour({self.name}, {self.dfc}, {self.worn_slot}, level_req: {self.level_req})"
+
+    def __repr__(self):
+        return f"Armour({self.name}, {self.dfc}, {self.worn_slot}, level_req: {self.level_req})"
+
+############################### Entity classes ################################
+
+class Entity:
+    def __init__(self, name: str):
+        self.name = name
+
+    def __str__(self):
+        return f"Entity({self.name})"
+
+    def __repr__(self):
+        return f"Entity({self.name})"
+
+    @property
+    def attack(self):
+        raise NotImplementedError
+
+    @property
+    def defence(self):
+        raise NotImplementedError
+
+    def nextlevel(self):
+        raise NotImplementedError
+
+    def levelup(self):
+        raise NotImplementedError
+
+    def give_exp(self):
+        raise NotImplementedError
+
 class Player(Entity):
-    def __init__(self, name, exp):
+    def __init__(self, name: str, exp: int):
         self.name = name
         self.exp = exp
         self.level = 1
         self.hp = 100
         self.max_hp = 100
-        self.equipment = {'weapon': None,
-                          'shield': None,
-                          'head': None,
-                          'chest': None,
-                          'feet': None,}
+        self.equipment = [
+            None, # Weapon
+            None, # Shield
+            None, # Head
+            None, # Body
+            None, # Legs
+        ]
+
+    def __str__(self):
+        return f"Player({self.name}, level: {self.level}, gear: {self.equipment})"
+
+    def __repr__(self):
+        return f"Player({self.name}, level: {self.level}, gear: {self.equipment})"
 
     @property
     def attack(self):
         """ Returns player's real attack power as int """
-        equipment_power = sum([getattr(self.equipment[i], attpow, 0) for i in self.equipment.values])
-        return round(self.level ** 0.97 + equipment_power + 1)
+        equipment_power = sum([i.attpow if hasattr(i, 'attpow') else 0 for i in self.equipment])
+        return round(self.level * 0.3 + equipment_power + 1)
+
+    @property
+    def defence(self):
+        """ Returns player's real defence as int """
+        equipment_def = sum([i.dfc if hasattr(i, 'dfc') else 0 for i in self.equipment])
+        return round(self.level * 0.1 + equipment_def)
 
     def nextlevel(self):
-        """Level-up experience curve, no cap"""
+        """ Level-up experience curve, no cap """
         exponent = 1.6
         basexp = 85
         return math.floor(basexp * self.level**exponent)
@@ -87,7 +150,7 @@ class Player(Entity):
         self.exp += value
         self.levelup()
 
-class Monster(Entity):
+class Enemy(Entity):
     def __init__(self, name, level, hp=1337, loot=(0,0,())):
         """
         name: str
@@ -105,7 +168,24 @@ class Monster(Entity):
         self.drop_count = random.randint(0,loot[1])
         self.drop_table = loot[2]
 
+    def __str__(self):
+        return f"Enemy({self.name}, level: {self.level}, hp: {self.max_hp}, drops: {self.drop_table})"
+
+    def __repr__(self):
+        return f"Enemy({self.name}, level: {self.level}, hp: {self.max_hp}, drops: {self.drop_table})"
+
+    @property
+    def attack(self):
+        return int(self.level ** 1.5 + 1)
+
+    @property
+    def defence(self):
+        return int(self.level ** 1.1)
+
+################################ Game objects #################################
+
 class Battle:
+    """ Creates a battle sequence """
     def __init__(self, party, enemy):
         """
         party: list of player party members
@@ -137,8 +217,15 @@ class Battle:
                 return True
 
     def attack(self, attacker, target):
-        target.hp -= attacker.level
-        print(f"{attacker.name} attacked {target.name}, causing {attacker.level} damage!", flush=True)
+        attack_avg = attacker.attack * (MAX_DEFENCE - target.defence) / MAX_DEFENCE
+        variance = round(random.uniform(0.0, 1.0), 3)
+        attack_dmg = round(attack_avg * variance)
+
+        target.hp -= attack_dmg
+        if attack_dmg:
+            print(f"{attacker.name} attacked {target.name}, causing {int(round(attack_dmg))} damage!", flush=True)
+        else:
+            print(f"{attacker.name} tried to attack {target.name}, but they skillfully dodged it.")
         time.sleep(0.1)
         if target.hp <= 0:
             target.hp = 0
@@ -161,10 +248,11 @@ class Battle:
         self.enemy_hp = sum([int(e.hp) for e in self.enemy])
 
 class Stage:
+    """ Creates a stage with multiple battle sequences """
     def __init__(self, floor):
         self.floor = floor
         self.wave = 0
-        self.enemies = [Monster("Goblin",             # Name
+        self.enemies = [Enemy("Goblin",             # Name
                                 (self.floor/5)+1,     # Level
                                 ((self.floor/5)*100), # HP
                                 (self.floor * 100,    # XP Drops

@@ -31,7 +31,7 @@ class Information:
             for character in characters:
                 name.append(tmp.format(character.name.center(fmt_width)))
                 health.append(tmp.format(f"HP: {int(character.hp)}/{int(character.max_hp)}".center(fmt_width)))
-                level.append(tmp.format(f"Level: {character.level}".center(fmt_width)))
+                level.append(tmp.format(f"Level: {int(character.level)}".center(fmt_width)))
                 try:
                     exp.append(tmp.format(f"EXP: {character.exp}".center(fmt_width)))
                 except (AttributeError, NotImplementedError):
